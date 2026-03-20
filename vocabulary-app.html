@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="단어장">
+  <title>단어장</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #4F6EF7;
+      --primary-light: #EEF2FF;
+      --bg: #F4F6FC;
+      --card: #FFFFFF;
+      --text: #1A1A2E;
+      --sub: #6B7280;
+      --border: #E5E7EB;
+      --danger: #EF4444;
+      --danger-light: #FEE2E2;
+      --success: #10B981;
+      --success-light: #D1FAE5;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overscroll-behavior: none;
+    }
+
+    /* ── SCREENS ── */
+    .screen {
+      display: none;
+      flex-direction: column;
+      position: fixed;
+      inset: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      background: var(--bg);
+      -webkit-overflow-scrolling: touch;
+    }
+    .screen.active { display: flex; }
+
+    /* ── NAV BAR ── */
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      padding-top: max(12px, env(safe-area-inset-top));
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .nav-title { font-size: 18px; font-weight: 700; flex: 1; }
+    .nav-btn {
+      background: none;
+      border: none;
+      font-size: 22px;
+      color: var(--primary);
+      cursor: pointer;
+      padding: 4px 6px;
+      display: flex;
+      align-items: center;
+      border-radius: 8px;
+    }
+    .nav-btn:active { background: var(--primary-light); }
+
+    /* ── CONTENT AREA ── */
+    .content {
+      padding: 16px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding-bottom: calc(24px + env(safe-area-inset-bottom));
+    }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 20px;
+      border-radius: 12px;
+      border: none;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.1s;
+      width: 100%;
+      font-family: inherit;
+    }
+    .btn:active { transform: scale(0.97); opacity: 0.85; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-secondary { background: var(--primary-light); color: var(--primary); }
+    .btn-ghost { background: transparent; color: var(--sub); border: 1.5px solid var(--border); }
+    .btn-danger { background: var(--danger-light); color: var(--danger); }
+    .btn-sm { padding: 10px 14px; font-size: 13px; width: auto; }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    /* ── FAB ── */
+    .fab {
+      position: fixed;
+      bottom: calc(28px + env(safe-area-inset-bottom));
+      right: 24px;
+      width: 58px; height: 58px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      font-size: 30px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(79,110,247,0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 40;
+    }
+    .fab:active { transform: scale(0.93); }
+
+    /* ── EMPTY STATE ── */
+    .empty {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px;
+      text-align: center;
+      color: var(--sub);
+      gap: 10px;
+    }
+    .empty-icon { font-size: 60px; }
+    .empty-title { font-size: 18px; font-weight: 700; color: var(--text); }
+
+    /* ── TOGGLE GROUP ── */
+    .toggle-group {
+      display: flex;
+      background: #F3F4F6;
+      border-radius: 10px;
+      padding: 3px;
+      gap: 2px;
+    }
+    .tg-btn {
+      padding: 8px 12px;
+      border: none;
+      background: transparent;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--sub);
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .tg-btn.on { background: #fff; color: var(--primary); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+
+    /* ── SETTING ROW ── */
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 13px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .setting-row:last-child { border-bottom: none; }
+    .setting-label { font-size: 15px; font-weight: 600; }
+    .setting-desc { font-size: 12px; color: var(--sub); margin-top: 2px; }
+
+    /* ── TOGGLE SWITCH ── */
+    .switch { position: relative; display: inline-block; width: 48px; height: 28px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .switch-slider {
+      position: absolute; inset: 0;
+      background: #D1D5DB;
+      border-radius: 28px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .switch-slider::before {
+      content: '';
+      position: absolute;
+      width: 22px; height: 22px;
+      left: 3px; bottom: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+    .switch input:checked + .switch-slider { background: var(--primary); }
+    .switch input:checked + .switch-slider::before { transform: translateX(20px); }
+
+    /* ── INPUT ── */
+    input[type="text"], input[type="number"], textarea {
+      width: 100%;
+      padding: 13px 14px;
+      border-radius: 12px;
+      border: 1.5px solid var(--border);
+      font-size: 16px;
+      font-family: inherit;
+      background: #fff;
+      color: var(--text);
+      -webkit-appearance: none;
+    }
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    /* ── MODAL ── */
+    .modal-bg {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      align-items: flex-end;
+    }
+    .modal-bg.active { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 24px 24px 0 0;
+      padding: 24px;
+      padding-bottom: max(24px, env(safe-area-inset-bottom));
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .modal-title { font-size: 18px; font-weight: 700; }
+
+    /* ── LOADING ── */
+    .loading-bg {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      z-index: 300;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .loading-bg.active { display: flex; }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 4px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ══════════════════════════════════════
+       HOME SCREEN
+    ══════════════════════════════════════ */
+    .book-card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .book-card:active { transform: scale(0.98); }
+    .book-icon {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      background: var(--primary-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+    .book-info { flex: 1; min-width: 0; }
+    .book-name { font-weight: 700; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .book-count { color: var(--sub); font-size: 13px; margin-top: 2px; }
+    .book-arrow { color: #ccc; font-size: 20px; }
+
+    /* ══════════════════════════════════════
+       BOOK DETAIL SCREEN
+    ══════════════════════════════════════ */
+    .word-item {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 13px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    .word-num { color: var(--sub); font-size: 12px; min-width: 22px; text-align: center; }
+    .word-text { flex: 1; min-width: 0; }
+    .word-en { font-weight: 700; font-size: 15px; }
+    .word-ko { color: var(--sub); font-size: 13px; margin-top: 2px; }
+    .word-del {
+      background: none;
+      border: none;
+      color: #d1d5db;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px;
+      line-height: 1;
+    }
+    .word-del:active { color: var(--danger); }
+    .action-row {
+      display: flex;
+      gap: 8px;
+      padding: 12px 16px 0;
+    }
+
+    /* ══════════════════════════════════════
+       CAMERA SCREEN
+    ══════════════════════════════════════ */
+    #cam-video {
+      width: 100%;
+      flex-shrink: 0;
+      background: #000;
+      display: block;
+      object-fit: cover;
+      max-height: 62vh;
+    }
+    #cam-canvas { display: none; }
+    .cam-footer {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 20px;
+      padding-bottom: max(20px, env(safe-area-inset-bottom));
+    }
+    .shutter {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: #fff;
+      border: 5px solid var(--primary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+    .shutter:active { transform: scale(0.9); }
+    .cam-hint { color: var(--sub); font-size: 13px; text-align: center; }
+
+    /* ══════════════════════════════════════
+       OCR REVIEW SCREEN
+    ══════════════════════════════════════ */
+    #ocr-img {
+      width: 100%;
+      max-height: 180px;
+      object-fit: contain;
+      border-radius: 12px;
+      background: #000;
+    }
+    .ocr-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .ocr-row input { flex: 1; padding: 10px 12px; font-size: 14px; }
+    .ocr-row .del-btn {
+      background: none;
+      border: none;
+      color: #d1d5db;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 8px 4px;
+    }
+    .ocr-row .del-btn:active { color: var(--danger); }
+
+    /* ══════════════════════════════════════
+       STUDY SCREEN
+    ══════════════════════════════════════ */
+    .study-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 20px;
+      gap: 20px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .study-card {
+      background: var(--card);
+      border-radius: 24px;
+      padding: 48px 28px;
+      text-align: center;
+      width: 100%;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .study-word-el {
+      font-size: 38px;
+      font-weight: 800;
+      color: var(--primary);
+      line-height: 1.2;
+      word-break: break-word;
+    }
+    .study-meaning-el {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text);
+      word-break: break-word;
+    }
+    .study-hidden {
+      color: transparent !important;
+      background: var(--primary-light);
+      border-radius: 8px;
+    }
+    .study-hint { color: var(--sub); font-size: 13px; }
+    .study-controls {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      padding: 0 16px 16px;
+      padding-bottom: max(16px, env(safe-area-inset-bottom));
+    }
+    .ctrl-btn {
+      width: 54px; height: 54px;
+      border-radius: 50%;
+      background: var(--card);
+      border: none;
+      font-size: 22px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ctrl-btn:active { transform: scale(0.92); }
+
+    /* ══════════════════════════════════════
+       TEST SCREEN
+    ══════════════════════════════════════ */
+    .progress-bar-wrap {
+      background: #F3F4F6;
+      border-radius: 8px;
+      height: 6px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 8px;
+      transition: width 0.3s;
+    }
+    .test-q-card {
+      text-align: center;
+    }
+    .test-q-text {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--primary);
+      word-break: break-word;
+      line-height: 1.3;
+    }
+    .choices {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .choice {
+      padding: 15px 16px;
+      border-radius: 12px;
+      border: 2px solid var(--border);
+      background: var(--card);
+      font-size: 15px;
+      font-family: inherit;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .choice:active { transform: scale(0.98); }
+    .choice.correct { border-color: var(--success); background: var(--success-light); }
+    .choice.wrong { border-color: var(--danger); background: var(--danger-light); }
+    .choice:disabled { cursor: default; }
+    .feedback {
+      padding: 13px;
+      border-radius: 12px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 15px;
+    }
+    .feedback.ok { background: var(--success-light); color: #065F46; }
+    .feedback.fail { background: var(--danger-light); color: #991B1B; }
+
+    /* ══════════════════════════════════════
+       TEST RESULT SCREEN
+    ══════════════════════════════════════ */
+    .result-score-wrap { text-align: center; padding: 8px 0; }
+    .result-score { font-size: 72px; font-weight: 900; color: var(--primary); line-height: 1; }
+    .result-denom { font-size: 20px; color: var(--sub); }
+    .result-pct { font-size: 22px; font-weight: 700; margin-top: 8px; }
+    .result-item {
+      padding: 11px 14px;
+      border-radius: 10px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .result-item.ok { background: var(--success-light); }
+    .result-item.fail { background: var(--danger-light); }
+    .result-mark { font-size: 18px; flex-shrink: 0; }
+    .result-word { font-weight: 700; font-size: 14px; }
+    .result-meaning { font-size: 12px; opacity: 0.75; }
+    .result-user { font-size: 11px; color: var(--danger); }
+
+    /* ══════════════════════════════════════
+       RADIO OPTION
+    ══════════════════════════════════════ */
+    .radio-option {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 14px;
+      background: #F9FAFB;
+      border-radius: 12px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: border-color 0.15s;
+    }
+    .radio-option:has(input:checked) { border-color: var(--primary); background: var(--primary-light); }
+    .radio-option input { width: 18px; height: 18px; accent-color: var(--primary); flex-shrink: 0; }
+    .radio-option-label { font-weight: 600; font-size: 14px; }
+    .radio-option-desc { font-size: 12px; color: var(--sub); margin-top: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════
+     LOADING OVERLAY
+════════════════════════════════════════════ -->
+<div class="loading-bg" id="loading-bg">
+  <div class="spinner"></div>
+  <div id="loading-msg">처리 중...</div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCREEN: HOME
+════════════════════════════════════════════ -->
+<div class="screen active" id="screen-home">
+  <div class="nav">
+    <div class="nav-title">내 단어장</div>
+  </div>
+  <div class="content" id="home-content"></div>
+  <button class="fab" onclick="openCreateModal()">+</button>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCREEN: BOOK DETAIL
+════════════════════════════════════════════ -->
+<div class="screen" id="screen-book">
+  <div class="nav">
+    <button class="nav-btn" onclick="nav('home')">&#8592;</button>
+    <div class="nav-title" id="book-nav-title"></div>
+    <button class="nav-btn" onclick="confirmDeleteBook()">&#x1F5D1;</button>
+  </div>
+  <div class="action-row">
+    <button class="btn btn-primary" style="flex:1" onclick="nav('study-settings')">외우기</button>
+    <button class="btn btn-secondary" style="flex:1" onclick="nav('test-settings')">시험</button>
+  </div>
+  <div class="action-row" style="padding-bottom:4px">
+    <button class="btn btn-ghost" style="flex:1;font-size:13px" onclick="openCamera()">카메라로 추가</button>
+    <button class="btn btn-ghost" style="flex:1;font-size:13px" onclick="openAddWordModal()">직접 추가</button>
+  </div>
+  <div class="content" id="book-content" style="padding-top:8px"></div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCREEN: CAMERA
+════════════════════════════════════════════ -->
+<div class="screen" id="screen-camera">
+  <div class="nav">
+    <button class="nav-btn" onclick="stopCamera(); nav('book')">&#8592;</button>
+    <div class="nav-title">카메라로 단어 인식</div>
+  </div>
+  <video id="cam-video" autoplay playsinline muted></video>
+  <canvas id="cam-canvas"></canvas>
+  <div class="cam-footer">
+    <div class="cam-hint">단어장 페이지가 화면에 잘 보이도록 맞춰주세요</div>
+    <button class="shutter" onclick="capturePhoto()">&#x1F4F7;</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCREEN: OCR REVIEW
+════════════════════════════════════════════ -->
+<div class="screen" id="screen-ocr">
+  <div class="nav">
+    <button class="nav-btn" onclick="nav('camera')">&#8592;</button>
+    <div class="nav-title">인식 결과 확인 / 수정</div>
+    <button class="nav-btn" style="font-size:15px;font-weight:700;color:var(--primary)" onclick="saveOcr()">저장</button>
+  </div>
+  <div class="content">
+    <img id="ocr-img" alt="촬영 이미지">
+    <p style="font-size:12px;color:var(--sub)">인식된 단어를 확인하고 수정하세요. 왼쪽: 영어, 오른쪽: 뜻</p>
+    <div id="ocr-rows" style="display:flex;flex-direction:column;gap:8px"></div>
+    <button class="btn btn-ghost" onclick="addOcrRow()">+ 행 추가</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCREEN: STUDY SETTINGS
+════════════════════════════════════════════ -->
+<div class="screen" id="screen-study-settings">
+  <div class="nav">
+    <button class="nav-btn" onclick="nav('book')">&#8592;</button>
+    <div class="nav-title">외우기 설정</div>
+  </div>
+  <div class="content">
+    <div class="card">
+      <!-- Order -->
+      <div class="setting-row">
+        <div class="setting-label">순서</div>
+        <div class="toggle-group">
+          <button class="tg-btn on" data-group="s-order" data-val="seq" onclick="tgSelect(this)">순서대로</button>
+          <button class="tg-btn" data-group="s-order" data-val="rand" onclick="tgSelect(this)">랜덤</button>
+        </div>
+      </div>
+      <!-- Show mode -->
+      <div class="setting-row">
+        <div class="setting-label">보여주기</div>
+        <div class="toggle-group">
+          <button class="tg-btn on" data-group="s-show" data-val="both" onclick="tgSelect(this)">둘다</button>
+          <button class="tg-btn" data-group="s-show" data-val="word" onclick="tgSelect(this)">단어만</button>
+          <button class="tg-btn" data-group="s-show" data-val="meaning" onclick="tgSelect(this)">뜻만</button>
+        </div>
+      </div>
+      <!-- Auto advance -->
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">자동 넘기기</div>
+        </div>
+        <div class="toggle-group">
+          <button class="tg-btn on" data-group="s-auto" data-val="0" onclick="tgSelect(this)">끄기</button>
+          <button class="tg-btn" data-group="s-auto" data-val="1" onclick="tgSelect(this)">1초</button>
+          <button class="tg-btn" data-group="s-auto" data-val="3" onclick="tgSelect(this)">3초</button>
+          <button class="tg-btn" data-group="s-auto" data-val="5" onclick="tgSelect(this)">5초</button>
+        </div>
+      </div>
+      <!-- Custom auto -->
+      <div class="setting-row">
+        <div class="setting-label" style="font-size:13px;color:var(--sub)">직접 입력 (초)</div>
+        <input type="number" id="s-auto-custom" min="1" max="99" placeholder="예: 7"
+          style="width:80px;padding:9px 12px;font-size:14px"
+          oninput="onCustomAuto(this)">
+      </div>
+      <!-- Auto read -->
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">자동 읽기</div>
+          <div class="setting-desc">단어가 나올 때 자동으로 발음</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="s-auto-read">
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:auto" onclick="startStudy()">시작 &#8594;</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCREEN: STUDY
+════════════════════════════════════════════ -->
+<div class="screen" id="screen-study">
+  <div class="nav">
+    <button class="nav-btn" onclick="stopStudyTimer(); nav('book')">&#8592;</button>
+    <div class="nav-title" id="study-progress"></div>
+    <div style="width:40px"></div>
+  </div>
+  <div class="study-wrap" id="study-wrap" onclick="studyTap()">
+    <div class="study-card">
+      <div class="study-word-el" id="study-word-el"></div>
+      <div class="study-meaning-el" id="study-meaning-el"></div>
+    </div>
+    <div class="study-hint" id="study-hint">탭하면 다음 단어</div>
+  </div>
+  <div class="study-controls">
+    <button class="ctrl-btn" onclick="studyMove(-1); event.stopPropagation()" title="이전">&#9664;</button>
+    <button class="ctrl-btn" onclick="speakCurrent(); event.stopPropagation()" title="발음 듣기">&#128266;</button>
+    <button class="ctrl-btn" onclick="studyMove(1); event.stopPropagation()" title="다음">&#9654;</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCREEN: TEST SETTINGS
+════════════════════════════════════════════ -->
+<div class="screen" id="screen-test-settings">
+  <div class="nav">
+    <button class="nav-btn" onclick="nav('book')">&#8592;</button>
+    <div class="nav-title">시험 설정</div>
+  </div>
+  <div class="content">
+    <div class="card">
+      <!-- Order -->
+      <div class="setting-row">
+        <div class="setting-label">순서</div>
+        <div class="toggle-group">
+          <button class="tg-btn on" data-group="t-order" data-val="seq" onclick="tgSelect(this)">순서대로</button>
+          <button class="tg-btn" data-group="t-order" data-val="rand" onclick="tgSelect(this)">랜덤</button>
+        </div>
+      </div>
+      <!-- Count -->
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">문제 수</div>
+          <div class="setting-desc" id="t-count-hint"></div>
+        </div>
+        <input type="number" id="t-count" min="1"
+          style="width:80px;padding:9px 12px;font-size:14px">
+      </div>
+      <!-- Type -->
+      <div class="setting-row" style="border:none;padding-bottom:0">
+        <div class="setting-label">유형</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <label class="radio-option">
+        <input type="radio" name="ttype" value="w2m" checked>
+        <div>
+          <div class="radio-option-label">단어 &#8594; 뜻 선택</div>
+          <div class="radio-option-desc">단어를 보고 뜻을 고르는 선다형</div>
+        </div>
+      </label>
+      <label class="radio-option">
+        <input type="radio" name="ttype" value="m2w_mc">
+        <div>
+          <div class="radio-option-label">뜻 &#8594; 단어 선택 (선다형)</div>
+          <div class="radio-option-desc">뜻을 보고 단어를 고르는 선다형</div>
+        </div>
+      </label>
+      <label class="radio-option">
+        <input type="radio" name="ttype" value="m2w_spell">
+        <div>
+          <div class="radio-option-label">뜻 &#8594; 단어 입력 (스펠링)</div>
+          <div class="radio-option-desc">뜻을 보고 단어를 직접 입력</div>
+        </div>
+      </label>
+      <label class="radio-option">
+        <input type="radio" name="ttype" value="audio_mc">
+        <div>
+          <div class="radio-option-label">발음 듣고 &#8594; 뜻 선택</div>
+          <div class="radio-option-desc">발음을 듣고 뜻을 고르는 선다형</div>
+        </div>
+      </label>
+    </div>
+    <button class="btn btn-primary" style="margin-top:auto" onclick="startTest()">시험 시작 &#8594;</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCREEN: TEST
+════════════════════════════════════════════ -->
+<div class="screen" id="screen-test">
+  <div class="nav">
+    <button class="nav-btn" onclick="if(confirm('시험을 종료할까요?')) nav('book')">&#8592;</button>
+    <div class="nav-title" id="test-progress"></div>
+    <div style="width:40px"></div>
+  </div>
+  <div class="content">
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="test-progress-bar" style="width:0%"></div>
+    </div>
+    <div class="card test-q-card">
+      <div id="test-audio-wrap" style="display:none;margin-bottom:12px;text-align:center">
+        <button class="btn btn-secondary btn-sm" onclick="playTestAudio()" style="width:auto;padding:10px 20px">
+          &#128266; 발음 듣기
+        </button>
+      </div>
+      <div class="test-q-text" id="test-q-text"></div>
+    </div>
+    <div class="choices" id="test-choices"></div>
+    <div id="test-spell-wrap" style="display:none;flex-direction:column;gap:10px">
+      <input type="text" id="test-spell-input" placeholder="단어를 입력하세요"
+        style="font-size:17px;text-align:center" autocomplete="off" autocorrect="off"
+        autocapitalize="none" spellcheck="false">
+      <button class="btn btn-primary" onclick="submitSpell()">확인</button>
+    </div>
+    <div id="test-feedback" style="display:none"></div>
+    <button id="test-next-btn" style="display:none" class="btn btn-primary" onclick="testNext()">다음 &#8594;</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCREEN: TEST RESULT
+════════════════════════════════════════════ -->
+<div class="screen" id="screen-result">
+  <div class="nav">
+    <div class="nav-title">시험 결과</div>
+  </div>
+  <div class="content">
+    <div class="card result-score-wrap">
+      <div style="font-size:14px;color:var(--sub);margin-bottom:4px">점수</div>
+      <div class="result-score" id="res-score"></div>
+      <div class="result-denom" id="res-denom"></div>
+      <div class="result-pct" id="res-pct"></div>
+    </div>
+    <div id="res-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    <button class="btn btn-primary" onclick="nav('book')">단어장으로 돌아가기</button>
+    <button class="btn btn-secondary" onclick="nav('test-settings')">다시 시험보기</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     MODAL: CREATE BOOK
+════════════════════════════════════════════ -->
+<div class="modal-bg" id="modal-create">
+  <div class="modal">
+    <div class="modal-title">새 단어장 만들기</div>
+    <input type="text" id="new-book-name" placeholder="단어장 이름"
+      onkeydown="if(event.key==='Enter') createBook()">
+    <button class="btn btn-primary" onclick="createBook()">만들기</button>
+    <button class="btn btn-ghost" onclick="closeModal('modal-create')">취소</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     MODAL: ADD WORD
+════════════════════════════════════════════ -->
+<div class="modal-bg" id="modal-add-word">
+  <div class="modal">
+    <div class="modal-title">단어 추가</div>
+    <input type="text" id="aw-word" placeholder="영어 단어"
+      onkeydown="if(event.key==='Enter') document.getElementById('aw-meaning').focus()">
+    <input type="text" id="aw-meaning" placeholder="뜻 (한국어)"
+      onkeydown="if(event.key==='Enter') addWord()">
+    <button class="btn btn-primary" onclick="addWord()">추가</button>
+    <button class="btn btn-ghost" onclick="closeModal('modal-add-word')">취소</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+'use strict';
+
+/* ════════════════════════════════════════════
+   DATA LAYER
+════════════════════════════════════════════ */
+const DB = (() => {
+  let books = JSON.parse(localStorage.getItem('vab_books') || '[]');
+  return {
+    all: () => books,
+    get: (id) => books.find(b => b.id === id),
+    create(name) {
+      const b = { id: Date.now(), name, words: [] };
+      books.push(b);
+      this.save();
+      return b;
+    },
+    update(book) {
+      const i = books.findIndex(b => b.id === book.id);
+      if (i >= 0) { books[i] = book; this.save(); }
+    },
+    remove(id) {
+      books = books.filter(b => b.id !== id);
+      this.save();
+    },
+    save() { localStorage.setItem('vab_books', JSON.stringify(books)); }
+  };
+})();
+
+/* ════════════════════════════════════════════
+   APP STATE
+════════════════════════════════════════════ */
+let curBook = null;
+
+// Study state
+let sWords = [], sIdx = 0, sRevealed = false, sTimer = null;
+const sCfg = { order: 'seq', show: 'both', auto: 0, autoRead: false };
+
+// Test state
+let tQuestions = [], tIdx = 0, tResults = [], tCorrectAns = '';
+const tCfg = { order: 'seq', count: 10, type: 'w2m' };
+
+// Toggle group state
+const tgState = {};
+
+/* ════════════════════════════════════════════
+   NAVIGATION
+════════════════════════════════════════════ */
+function nav(screenId) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + screenId).classList.add('active');
+}
+
+/* ════════════════════════════════════════════
+   HOME
+════════════════════════════════════════════ */
+function renderHome() {
+  const el = document.getElementById('home-content');
+  const books = DB.all();
+  if (!books.length) {
+    el.innerHTML = `<div class="empty">
+      <div class="empty-icon">&#x1F4DA;</div>
+      <div class="empty-title">단어장이 없습니다</div>
+      <div>+ 버튼으로 새 단어장을 만드세요</div>
+    </div>`;
+    return;
+  }
+  el.innerHTML = books.map(b => `
+    <div class="book-card" onclick="openBook(${b.id})">
+      <div class="book-icon">&#x1F4D6;</div>
+      <div class="book-info">
+        <div class="book-name">${esc(b.name)}</div>
+        <div class="book-count">${b.words.length}개 단어</div>
+      </div>
+      <div class="book-arrow">&#x203A;</div>
+    </div>
+  `).join('');
+}
+
+function openCreateModal() {
+  document.getElementById('new-book-name').value = '';
+  showModal('modal-create');
+  setTimeout(() => document.getElementById('new-book-name').focus(), 350);
+}
+
+function createBook() {
+  const name = document.getElementById('new-book-name').value.trim();
+  if (!name) return alert('이름을 입력하세요');
+  curBook = DB.create(name);
+  closeModal('modal-create');
+  renderBook();
+  nav('book');
+}
+
+/* ════════════════════════════════════════════
+   BOOK DETAIL
+════════════════════════════════════════════ */
+function openBook(id) {
+  curBook = DB.get(id);
+  renderBook();
+  nav('book');
+}
+
+function renderBook() {
+  if (!curBook) return;
+  curBook = DB.get(curBook.id);
+  document.getElementById('book-nav-title').textContent = curBook.name;
+  const el = document.getElementById('book-content');
+  if (!curBook.words.length) {
+    el.innerHTML = `<div class="empty" style="min-height:200px">
+      <div class="empty-icon">&#x270F;&#xFE0F;</div>
+      <div class="empty-title">단어가 없습니다</div>
+      <div>카메라나 직접 추가로 단어를 넣어보세요</div>
+    </div>`;
+    return;
+  }
+  el.innerHTML = curBook.words.map((w, i) => `
+    <div class="word-item">
+      <div class="word-num">${i + 1}</div>
+      <div class="word-text">
+        <div class="word-en">${esc(w.word)}</div>
+        <div class="word-ko">${esc(w.meaning)}</div>
+      </div>
+      <button class="word-del" onclick="removeWord(${i})">&#215;</button>
+    </div>
+  `).join('');
+}
+
+function removeWord(idx) {
+  curBook.words.splice(idx, 1);
+  DB.update(curBook);
+  renderBook();
+}
+
+function confirmDeleteBook() {
+  if (!confirm(`"${curBook.name}" 단어장을 삭제할까요?`)) return;
+  DB.remove(curBook.id);
+  curBook = null;
+  renderHome();
+  nav('home');
+}
+
+function openAddWordModal() {
+  document.getElementById('aw-word').value = '';
+  document.getElementById('aw-meaning').value = '';
+  showModal('modal-add-word');
+  setTimeout(() => document.getElementById('aw-word').focus(), 350);
+}
+
+function addWord() {
+  const word = document.getElementById('aw-word').value.trim();
+  const meaning = document.getElementById('aw-meaning').value.trim();
+  if (!word || !meaning) return alert('단어와 뜻을 모두 입력하세요');
+  curBook.words.push({ word, meaning });
+  DB.update(curBook);
+  closeModal('modal-add-word');
+  renderBook();
+}
+
+/* ════════════════════════════════════════════
+   CAMERA
+════════════════════════════════════════════ */
+let camStream = null;
+let capturedImage = null;
+
+async function openCamera() {
+  nav('camera');
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+    });
+    const video = document.getElementById('cam-video');
+    video.srcObject = camStream;
+    await video.play();
+  } catch (e) {
+    alert('카메라 접근 권한이 필요합니다.\n설정에서 카메라 권한을 허용해 주세요.');
+    stopCamera();
+    nav('book');
+  }
+}
+
+function stopCamera() {
+  if (camStream) {
+    camStream.getTracks().forEach(t => t.stop());
+    camStream = null;
+  }
+}
+
+function capturePhoto() {
+  const video = document.getElementById('cam-video');
+  const canvas = document.getElementById('cam-canvas');
+  canvas.width = video.videoWidth || 1280;
+  canvas.height = video.videoHeight || 720;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  capturedImage = canvas.toDataURL('image/jpeg', 0.92);
+  stopCamera();
+  document.getElementById('ocr-img').src = capturedImage;
+  nav('ocr');
+  runOCR();
+}
+
+/* ════════════════════════════════════════════
+   OCR
+════════════════════════════════════════════ */
+async function runOCR() {
+  showLoading('단어 인식 중...');
+  try {
+    const result = await Tesseract.recognize(capturedImage, 'eng+kor', {
+      logger: m => {
+        if (typeof m.progress === 'number') {
+          setLoadingMsg(`인식 중... ${Math.round(m.progress * 100)}%`);
+        }
+      }
+    });
+    const pairs = parseOcrText(result.data.text);
+    renderOcrRows(pairs);
+  } catch (e) {
+    alert('인식에 실패했습니다. 다시 촬영해 보세요.');
+    renderOcrRows([]);
+  }
+  hideLoading();
+}
+
+function parseOcrText(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 1);
+  const pairs = [];
+
+  for (const line of lines) {
+    // "word - meaning" or "word: meaning" or "word : meaning"
+    let m = line.match(/^([a-zA-Z][a-zA-Z\s''-]{0,30}?)\s*[-:]\s*(.{1,60})$/);
+    if (m) { pairs.push({ word: m[1].trim(), meaning: m[2].trim() }); continue; }
+
+    // Tab-separated
+    const tabParts = line.split(/\t+/);
+    if (tabParts.length === 2 && /[a-zA-Z]/.test(tabParts[0])) {
+      pairs.push({ word: tabParts[0].trim(), meaning: tabParts[1].trim() });
+      continue;
+    }
+
+    // Double-space separated
+    const spaceParts = line.split(/\s{2,}/);
+    if (spaceParts.length === 2 && /[a-zA-Z]/.test(spaceParts[0])) {
+      pairs.push({ word: spaceParts[0].trim(), meaning: spaceParts[1].trim() });
+    }
+  }
+
+  // Fallback: alternating lines (even=word, odd=meaning)
+  if (pairs.length === 0 && lines.length >= 2) {
+    for (let i = 0; i + 1 < lines.length; i += 2) {
+      if (/[a-zA-Z]/.test(lines[i])) {
+        pairs.push({ word: lines[i], meaning: lines[i + 1] });
+      }
+    }
+  }
+
+  return pairs.length > 0 ? pairs : [{ word: '', meaning: '' }];
+}
+
+function renderOcrRows(pairs) {
+  const container = document.getElementById('ocr-rows');
+  container.innerHTML = '';
+  pairs.forEach(p => addOcrRow(p.word, p.meaning));
+}
+
+function addOcrRow(word = '', meaning = '') {
+  const container = document.getElementById('ocr-rows');
+  const div = document.createElement('div');
+  div.className = 'ocr-row';
+  div.innerHTML = `
+    <input type="text" class="ocr-w" placeholder="영어 단어" value="${esc(word)}">
+    <input type="text" class="ocr-m" placeholder="뜻" value="${esc(meaning)}">
+    <button class="del-btn" onclick="this.closest('.ocr-row').remove()">&#215;</button>
+  `;
+  container.appendChild(div);
+}
+
+function saveOcr() {
+  const rows = document.querySelectorAll('#ocr-rows .ocr-row');
+  const words = [];
+  rows.forEach(row => {
+    const word = row.querySelector('.ocr-w').value.trim();
+    const meaning = row.querySelector('.ocr-m').value.trim();
+    if (word && meaning) words.push({ word, meaning });
+  });
+  if (!words.length) return alert('저장할 단어가 없습니다. 단어와 뜻을 입력해 주세요.');
+  curBook.words.push(...words);
+  DB.update(curBook);
+  renderBook();
+  nav('book');
+  setTimeout(() => alert(`${words.length}개 단어가 추가되었습니다!`), 300);
+}
+
+/* ════════════════════════════════════════════
+   STUDY SETTINGS
+════════════════════════════════════════════ */
+function navStudySettings() {
+  if (!curBook || curBook.words.length === 0) return alert('단어를 먼저 추가하세요.');
+  nav('study-settings');
+}
+
+function onCustomAuto(input) {
+  const v = parseInt(input.value);
+  if (v > 0) {
+    // Deselect preset buttons
+    document.querySelectorAll('[data-group="s-auto"]').forEach(b => b.classList.remove('on'));
+    sCfg.auto = v;
+  }
+}
+
+/* ════════════════════════════════════════════
+   STUDY MODE
+════════════════════════════════════════════ */
+function startStudy() {
+  if (!curBook.words.length) return alert('단어가 없습니다.');
+
+  sCfg.order = getTgVal('s-order') || 'seq';
+  sCfg.show  = getTgVal('s-show')  || 'both';
+  const autoVal = getTgVal('s-auto');
+  sCfg.auto = autoVal != null ? parseInt(autoVal) : sCfg.auto;
+  sCfg.autoRead = document.getElementById('s-auto-read').checked;
+
+  sWords = [...curBook.words];
+  if (sCfg.order === 'rand') shuffle(sWords);
+  sIdx = 0;
+  sRevealed = false;
+
+  nav('study');
+  renderStudyCard();
+
+  if (sCfg.auto > 0) {
+    sTimer = setInterval(() => { sRevealed = true; studyMove(1); }, sCfg.auto * 1000);
+  }
+}
+
+function renderStudyCard() {
+  const w = sWords[sIdx];
+  document.getElementById('study-progress').textContent = `${sIdx + 1} / ${sWords.length}`;
+
+  const wordEl    = document.getElementById('study-word-el');
+  const meaningEl = document.getElementById('study-meaning-el');
+  const hintEl    = document.getElementById('study-hint');
+
+  wordEl.textContent    = w.word;
+  meaningEl.textContent = w.meaning;
+  wordEl.className    = 'study-word-el';
+  meaningEl.className = 'study-meaning-el';
+
+  if (sCfg.show === 'word') {
+    // Show word, hide meaning — tap reveals meaning
+    meaningEl.classList.add('study-hidden');
+    hintEl.textContent = sRevealed ? '탭하면 다음 단어' : '탭하면 뜻 보기';
+  } else if (sCfg.show === 'meaning') {
+    // Show meaning, hide word — tap reveals word
+    wordEl.classList.add('study-hidden');
+    hintEl.textContent = sRevealed ? '탭하면 다음 단어' : '탭하면 단어 보기';
+  } else {
+    hintEl.textContent = '탭하면 다음 단어';
+  }
+
+  if (sCfg.autoRead) speakWord(w.word);
+}
+
+function studyTap() {
+  if (sCfg.show !== 'both' && !sRevealed) {
+    // First tap: reveal hidden part
+    sRevealed = true;
+    document.getElementById('study-word-el').classList.remove('study-hidden');
+    document.getElementById('study-meaning-el').classList.remove('study-hidden');
+    document.getElementById('study-hint').textContent = '탭하면 다음 단어';
+  } else {
+    studyMove(1);
+  }
+}
+
+function studyMove(dir) {
+  stopStudyTimer();
+  const next = sIdx + dir;
+  if (next < 0) return;
+  if (next >= sWords.length) {
+    if (confirm('모든 단어를 다 봤습니다!\n처음부터 다시 볼까요?')) {
+      sIdx = 0;
+      sRevealed = false;
+      renderStudyCard();
+      if (sCfg.auto > 0) {
+        sTimer = setInterval(() => { sRevealed = true; studyMove(1); }, sCfg.auto * 1000);
+      }
+    } else {
+      nav('book');
+    }
+    return;
+  }
+  sIdx = next;
+  sRevealed = false;
+  renderStudyCard();
+  if (sCfg.auto > 0) {
+    sTimer = setInterval(() => { sRevealed = true; studyMove(1); }, sCfg.auto * 1000);
+  }
+}
+
+function stopStudyTimer() {
+  if (sTimer) { clearInterval(sTimer); sTimer = null; }
+}
+
+function speakCurrent() {
+  if (sWords[sIdx]) speakWord(sWords[sIdx].word);
+}
+
+/* ════════════════════════════════════════════
+   TEST SETTINGS
+════════════════════════════════════════════ */
+function navTestSettings() {
+  if (!curBook || curBook.words.length === 0) return alert('단어를 먼저 추가하세요.');
+  const max = curBook.words.length;
+  const countInput = document.getElementById('t-count');
+  countInput.value = Math.min(10, max);
+  countInput.max = max;
+  document.getElementById('t-count-hint').textContent = `최대 ${max}개`;
+  nav('test-settings');
+}
+
+/* ════════════════════════════════════════════
+   TEST MODE
+════════════════════════════════════════════ */
+function startTest() {
+  tCfg.order = getTgVal('t-order') || 'seq';
+  tCfg.type  = document.querySelector('input[name="ttype"]:checked').value;
+  let count  = parseInt(document.getElementById('t-count').value) || 10;
+  count = Math.max(1, Math.min(count, curBook.words.length));
+
+  let words = [...curBook.words];
+  if (tCfg.order === 'rand') shuffle(words);
+  tQuestions = words.slice(0, count);
+  tIdx = 0;
+  tResults = [];
+
+  nav('test');
+  renderTestQ();
+}
+
+function renderTestQ() {
+  const q     = tQuestions[tIdx];
+  const total = tQuestions.length;
+  const type  = tCfg.type;
+
+  document.getElementById('test-progress').textContent = `${tIdx + 1} / ${total}`;
+  document.getElementById('test-progress-bar').style.width = `${(tIdx / total) * 100}%`;
+
+  // Reset UI
+  document.getElementById('test-choices').innerHTML = '';
+  document.getElementById('test-feedback').style.display = 'none';
+  document.getElementById('test-next-btn').style.display = 'none';
+  document.getElementById('test-spell-wrap').style.display = 'none';
+  document.getElementById('test-audio-wrap').style.display = 'none';
+  document.getElementById('test-spell-input').value = '';
+
+  if (type === 'w2m') {
+    document.getElementById('test-q-text').textContent = q.word;
+    const choices = makeChoices(q, 'meaning');
+    tCorrectAns = q.meaning;
+    renderChoices(choices, q.meaning);
+  } else if (type === 'm2w_mc') {
+    document.getElementById('test-q-text').textContent = q.meaning;
+    const choices = makeChoices(q, 'word');
+    tCorrectAns = q.word;
+    renderChoices(choices, q.word);
+  } else if (type === 'm2w_spell') {
+    document.getElementById('test-q-text').textContent = q.meaning;
+    document.getElementById('test-spell-wrap').style.display = 'flex';
+    setTimeout(() => document.getElementById('test-spell-input').focus(), 300);
+  } else if (type === 'audio_mc') {
+    document.getElementById('test-q-text').textContent = '?';
+    document.getElementById('test-audio-wrap').style.display = 'block';
+    const choices = makeChoices(q, 'meaning');
+    tCorrectAns = q.meaning;
+    renderChoices(choices, q.meaning);
+    setTimeout(() => speakWord(q.word), 400);
+  }
+}
+
+function makeChoices(correctWord, field) {
+  const others = curBook.words.filter(w => w !== correctWord);
+  shuffle(others);
+  const wrongs = others.slice(0, 3).map(w => w[field]);
+  const choices = [correctWord[field], ...wrongs];
+  shuffle(choices);
+  return choices;
+}
+
+function renderChoices(choices, correct) {
+  const container = document.getElementById('test-choices');
+  container.innerHTML = choices.map(c =>
+    `<button class="choice" data-val="${esc(c)}">${esc(c)}</button>`
+  ).join('');
+}
+
+// Event delegation for choices
+document.getElementById('test-choices').addEventListener('click', e => {
+  const btn = e.target.closest('.choice');
+  if (!btn || btn.disabled) return;
+  const chosen = btn.dataset.val;
+  handleAnswer(chosen === tCorrectAns, tCorrectAns, btn);
+});
+
+function handleAnswer(isCorrect, correct, chosenBtn) {
+  // Disable all choices
+  document.querySelectorAll('.choice').forEach(b => {
+    b.disabled = true;
+    if (b.dataset.val === correct) b.classList.add('correct');
+  });
+  if (chosenBtn && !isCorrect) chosenBtn.classList.add('wrong');
+
+  showFeedback(isCorrect, correct);
+  tResults.push({ q: tQuestions[tIdx], correct: isCorrect, userAnswer: chosenBtn ? chosenBtn.dataset.val : '' });
+}
+
+function submitSpell() {
+  const answer = document.getElementById('test-spell-input').value.trim();
+  const correct = tQuestions[tIdx].word;
+  const isCorrect = answer.toLowerCase() === correct.toLowerCase();
+
+  document.getElementById('test-spell-input').disabled = true;
+  document.querySelector('#test-spell-wrap button').disabled = true;
+
+  showFeedback(isCorrect, correct);
+  tResults.push({ q: tQuestions[tIdx], correct: isCorrect, userAnswer: answer });
+}
+
+function showFeedback(isCorrect, correct) {
+  const el = document.getElementById('test-feedback');
+  el.style.display = 'block';
+  el.className = 'feedback ' + (isCorrect ? 'ok' : 'fail');
+  el.textContent = isCorrect ? '정답!' : `오답 — 정답: ${correct}`;
+
+  const nextBtn = document.getElementById('test-next-btn');
+  nextBtn.style.display = 'block';
+  nextBtn.textContent = tIdx < tQuestions.length - 1 ? '다음 →' : '결과 보기';
+}
+
+function testNext() {
+  tIdx++;
+  if (tIdx >= tQuestions.length) {
+    showResult();
+  } else {
+    renderTestQ();
+  }
+}
+
+function playTestAudio() {
+  speakWord(tQuestions[tIdx].word);
+}
+
+function showResult() {
+  const score = tResults.filter(r => r.correct).length;
+  const total = tResults.length;
+  const pct   = Math.round((score / total) * 100);
+
+  document.getElementById('res-score').textContent = score;
+  document.getElementById('res-denom').textContent = `/ ${total}`;
+  const emoji = pct === 100 ? '🎉' : pct >= 80 ? '😊' : pct >= 60 ? '😐' : '😢';
+  document.getElementById('res-pct').textContent = `${emoji} ${pct}%`;
+
+  document.getElementById('res-list').innerHTML = tResults.map(r => `
+    <div class="result-item ${r.correct ? 'ok' : 'fail'}">
+      <div class="result-mark">${r.correct ? '✓' : '✗'}</div>
+      <div>
+        <div class="result-word">${esc(r.q.word)}</div>
+        <div class="result-meaning">${esc(r.q.meaning)}</div>
+        ${!r.correct && r.userAnswer ? `<div class="result-user">내 답: ${esc(r.userAnswer)}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  nav('result');
+}
+
+/* ════════════════════════════════════════════
+   TTS
+════════════════════════════════════════════ */
+function speakWord(word) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(word);
+  utt.lang = 'en-US';
+  utt.rate = 0.85;
+  const voices = window.speechSynthesis.getVoices();
+  const voice = voices.find(v => v.lang === 'en-US' && v.localService) ||
+                voices.find(v => v.lang.startsWith('en'));
+  if (voice) utt.voice = voice;
+  window.speechSynthesis.speak(utt);
+}
+
+/* ════════════════════════════════════════════
+   TOGGLE GROUP HELPER
+════════════════════════════════════════════ */
+function tgSelect(btn) {
+  const group = btn.dataset.group;
+  document.querySelectorAll(`[data-group="${group}"]`).forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  tgState[group] = btn.dataset.val;
+  // Sync to config
+  if (group === 's-order') sCfg.order = btn.dataset.val;
+  if (group === 's-show')  sCfg.show  = btn.dataset.val;
+  if (group === 's-auto')  { sCfg.auto = parseInt(btn.dataset.val); document.getElementById('s-auto-custom').value = ''; }
+  if (group === 't-order') tCfg.order = btn.dataset.val;
+}
+
+function getTgVal(group) {
+  const on = document.querySelector(`[data-group="${group}"].on`);
+  return on ? on.dataset.val : null;
+}
+
+/* ════════════════════════════════════════════
+   MODAL HELPERS
+════════════════════════════════════════════ */
+function showModal(id) { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+document.querySelectorAll('.modal-bg').forEach(bg => {
+  bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('active'); });
+});
+
+/* ════════════════════════════════════════════
+   LOADING HELPERS
+════════════════════════════════════════════ */
+function showLoading(msg) {
+  setLoadingMsg(msg);
+  document.getElementById('loading-bg').classList.add('active');
+}
+function setLoadingMsg(msg) { document.getElementById('loading-msg').textContent = msg; }
+function hideLoading() { document.getElementById('loading-bg').classList.remove('active'); }
+
+/* ════════════════════════════════════════════
+   UTILS
+════════════════════════════════════════════ */
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+function esc(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+/* ════════════════════════════════════════════
+   BUTTON WIRING (nav overrides)
+════════════════════════════════════════════ */
+// Patch nav calls from book buttons
+document.querySelector('#screen-book .action-row .btn-primary').onclick = () => {
+  if (!curBook || !curBook.words.length) return alert('단어를 먼저 추가하세요.');
+  nav('study-settings');
+};
+document.querySelector('#screen-book .action-row .btn-secondary').onclick = () => {
+  if (!curBook || !curBook.words.length) return alert('단어를 먼저 추가하세요.');
+  navTestSettings();
+};
+
+/* ════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════ */
+window.speechSynthesis?.getVoices();
+window.speechSynthesis?.addEventListener?.('voiceschanged', () => {});
+renderHome();
+</script>
+</body>
+</html>
